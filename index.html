@@ -13,7 +13,7 @@
             </svg>
         </div>
 
-<!--         <div class="selectors">
+        <div class="selectors">
             <b>X-Axis:</b>
             <select id="xAxis" onchange="onAxisChange()">
                 <option value="cylinders">cylinders</option>
@@ -24,18 +24,36 @@
                 <option value="0-60 mph (s)">0-60 mph (s)</option>
                 <option value="year">year</option>
             </select>
-            <b>Y-Axis:</b>
-            <select id="yAxis" onchange="onAxisChange()">
-                <option value="power (hp)">power (hp)</option>
-                <option value="cylinders">cylinders</option>
-                <option value="economy (mpg)">economy (mpg)</option>
-                <option value="displacement (cc)">displacement (cc)</option>
-                <option value="weight (lb)">weight (lb)</option>
-                <option value="0-60 mph (s)">0-60 mph (s)</option>
-                <option value="year">year</option>
-            </select>
+
+            <br>
+            <b>Genres:</b>
+            <br>
+            <button type="button" onclick="allOn()" id="allOn">Check All</button>
+            <button type="button" onclick="allOff()" id="allOff">Uncheck All</button><br>
+            <input type="checkbox" onchange="redraw()" checked id="Comedy">Comedy</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Drama">Drama</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Romance">Romance</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Biography">Biography</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Sport">Sport</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Action">Action</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Advetnure">Advetnure</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="History">History</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="War">War</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Horror">Horror</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Mystery">Mystery</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Thriller">Thriller</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Sci-Fi">Sci-Fi</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Crime">Crime</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Documentary">Documentary</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Music">Music</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Fantasy">Fantasy</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Western">Western</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Animation">Animation</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Family">Family</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="Musical">Musical</input><br>
+            <input type="checkbox" onchange="redraw()" checked id="News">News</input><br>
         </div>
- -->    </div>
+    </div>
 </body>
 <script src="//d3js.org/d3.v5.min.js"></script>
 <!-- <script src="./d3-tip.js"></script> -->

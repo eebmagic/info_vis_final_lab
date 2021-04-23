@@ -1,4 +1,5 @@
 var svg = d3.select('svg');
+var selectors = d3.select('.selectors');
 
 // Get layout parameters
 var svgWidth = +svg.attr('width');
@@ -459,6 +460,45 @@ function drawLineChart(genreSelection, yearSelection) {
         });
 }
 
+function redraw() {
+    console.log("CHECHBOX CHANGED. REDRAWING CHARTS.")
+    // var boxes = d3.select('input').property('checked', true);
+    // console.log(boxes);
+
+    var selected = [];
+    d3.selectAll("input").each(function(d){ 
+        if(d3.select(this).attr("type") == "checkbox") {
+            if (d3.select(this).node().checked) {
+                selected.push(d3.select(this).attr('id'));
+            }
+        }
+    });
+    console.log(selected);
+
+    var years = [2010, 2016];
+    drawSplotChart(selected, years);
+    drawBarChart(selected, years);
+    drawLineChart(selected, years);
+}
+
+function allOn() {
+    d3.selectAll("input").each(function(d){ 
+        if(d3.select(this).attr("type") == "checkbox") {
+            d3.select(this).node().checked = true;
+        }
+    });
+    redraw();
+}
+
+function allOff() {
+    d3.selectAll("input").each(function(d){ 
+        if(d3.select(this).attr("type") == "checkbox") {
+            d3.select(this).node().checked = false;
+        }
+    });
+    redraw();
+}
+
 var cells = [];
 function drawGraphs() {
     d3.csv('data/filtered_movies.csv', dataPreprocessor).then(function(dataset) {
@@ -477,21 +517,29 @@ function drawGraphs() {
             console.log(allGenres);
 
 
-            /// Add frame for splot?
+            // Add the checkboxes
+            selectors.selectAll('input')
+                .data(allGenres)
+                .enter()
+                .append('input')
+                .attr('type', 'checkbox')
+                .attr('value', function(g){
+                    console.log(`Adding value for ${g}`)
+                    return g;
+                })
 
-            // Render gridlines and labels for line plot
+
+            // Get the parameters to chart
             var years = [2010, 2016];
             var genres = Array.from(allGenres);
             // var genres = Array.from(allGenres).slice(12);
             // var genres = ["Action", "Thriller"];
-            var genres = ["News", "Documentary"];
+            // var genres = ["News", "Documentary"];
 
+            // Draw the charts, given the parameters
             drawSplotChart(genres, years);
             drawBarChart(genres, years);
             drawLineChart(genres, years);
-
-            // Render gridlines and labels for bar chart
-
 
         });
 }
