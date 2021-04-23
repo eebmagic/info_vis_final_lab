@@ -38,13 +38,13 @@ var chartLine = svg.append('g')
 
 
 // Axis for scatter plot
-var xScale = d3.scaleLinear().range([0, cellWidth - cellPadding]);
-var yScale = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
+var xScaleSplot = d3.scaleLinear().range([0, cellWidth - cellPadding]);
+var yScaleSplot = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
 // axes that are rendered already for you
 // var xAxis = d3.axisTop(xScale).ticks(6).tickSize(-cellHeight * N, 0, 0);
 // var yAxis = d3.axisLeft(yScale).ticks(6).tickSize(-cellWidth * N, 0, 0);
-var xAxis = d3.axisTop(xScale).ticks(4).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
-var yAxis = d3.axisLeft(yScale).ticks(6).tickSize(-cellWidth, 0, 0).tickFormat(d3.format("$.0s"));
+var xAxisSplot = d3.axisTop(xScaleSplot).ticks(4).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
+var yAxisSplot = d3.axisLeft(yScaleSplot).ticks(6).tickSize(-cellWidth, 0, 0).tickFormat(d3.format("$.0s"));
 
 // Axis for bar chart
 /// NOTE: this formatting gets a little weird for Billions because of SI abbreviations
@@ -273,8 +273,8 @@ function drawSplotChart(genreSelection, yearSelection) {
             return 'translate('+[cellPadding / 2, 0]+')';
         })
         .each(function(attribute){
-            xScale.domain(budgetExtent);
-            d3.select(this).call(xAxis);
+            xScaleSplot.domain(budgetExtent);
+            d3.select(this).call(xAxisSplot);
             d3.select(this).append('text')
                 .text("Budget")
                 .attr('class', 'axis-label')
@@ -290,13 +290,28 @@ function drawSplotChart(genreSelection, yearSelection) {
             return 'translate('+[0, cellPadding/2]+')';
         })
         .each(function(attribute){
-            yScale.domain(grossExtent);
-            d3.select(this).call(yAxis);
+            yScaleSplot.domain(grossExtent);
+            d3.select(this).call(yAxisSplot);
             d3.select(this).append('text')
                 .text("Gross")
                 .attr('class', 'axis-label')
                 .attr('transform', 'translate('+[-50, (cellHeight - cellPadding)/2]+')rotate(270)');
         });
+
+
+    // Draw points on plot
+    chartSplot.selectAll('circle').remove();
+    chartSplot.selectAll('circle')
+        .data(splotMovies)
+        .enter()
+        .append('circle')
+            .attr('cx', function(m){
+                return xScaleSplot(m.budget);
+            })
+            .attr('cy', function(m){
+                return yScaleSplot(m.gross);
+            })
+            .attr('r', 4);
 }
 
 function drawBarChart(genreSelection, yearSelection) {
@@ -466,10 +481,10 @@ function drawGraphs() {
 
             // Render gridlines and labels for line plot
             var years = [2010, 2016];
-            // var genres = Array.from(allGenres);
+            var genres = Array.from(allGenres);
             // var genres = Array.from(allGenres).slice(12);
-            var genres = ["Action", "Thriller"];
-            // var genres = ["News"];
+            // var genres = ["Action", "Thriller"];
+            var genres = ["News", "Documentary"];
 
             drawSplotChart(genres, years);
             drawBarChart(genres, years);
