@@ -7,9 +7,6 @@ var svgHeight = +svg.attr('height')*2;
 var padding = {t: 40, r: 40, b: 40, l: 40};
 var cellPadding = 10;
 
-// Create a group element for appending chart elements
-var chartG = svg.append('g')
-    .attr('transform', 'translate('+[padding.l*2, padding.t]+')');
 
 // var dataAttributes = [
 //         'color', 'director_name', 'num_critic_for_reviews', 'duration',
@@ -20,16 +17,27 @@ var chartG = svg.append('g')
 //         'aspect_ratio', 'movie_facebook_likes'
 //     ]
 
-var dataAttributes = ['budget', 'gross', 'genres']
+var dataAttributes = ['budget', 'gross', 'genres', 'title_year']
 // var dataAttributes = ['budget', 'gross']
 
 var N = dataAttributes.length;
 
 // Compute chart dimensions
-var cellWidth = (svgWidth - padding.l - padding.r) / N;
-var cellHeight = (svgHeight - padding.t - padding.b) / N;
+var cellWidth = (svgWidth - padding.l - padding.r) / 3;
+var cellHeight = (svgHeight - padding.t - padding.b) / 6;
 
-// Global x and y scales to be used for all SplomCells
+// Create a group element for appending chart elements
+var chartSplot = svg.append('g')
+    .attr('transform', 'translate('+[padding.l*2, padding.t]+')');
+
+var chartBar = svg.append('g')
+    .attr('transform', 'translate('+[padding.l*2, cellHeight + padding.t*2]+')');
+
+var chartLine = svg.append('g')
+    .attr('transform', 'translate('+[cellWidth + padding.l*4, padding.t]+')');
+
+
+// Axis for scatter plot
 var xScale = d3.scaleLinear().range([0, cellWidth - cellPadding]);
 var yScale = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
 // axes that are rendered already for you
@@ -38,12 +46,27 @@ var yScale = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
 var xAxis = d3.axisTop(xScale).ticks(4).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
 var yAxis = d3.axisLeft(yScale).ticks(6).tickSize(-cellWidth, 0, 0).tickFormat(d3.format("$.0s"));
 
+// Axis for bar chart
+/// NOTE: this formatting gets a little weird for Billions because of SI abbreviations
+var xScaleBar = d3.scaleLinear().range([0, cellWidth - cellPadding]);
+var yScaleBar = d3.scaleBand().range([0, cellWidth]);
+var xAxisBar = d3.axisTop(xScaleBar).ticks(7).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
+var yAxisBar = d3.axisLeft(yScaleBar);
+
+// Axis for line chart
+var xScaleLine = d3.scaleLinear().range([0, cellWidth - cellPadding]);
+var yScaleLine = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
+var xAxisLine = d3.axisTop(xScaleLine).ticks(2016-2010).tickSize(-cellHeight, 0, 0).tickFormat(d3.format(""));
+var yAxisLine = d3.axisLeft(yScaleLine).ticks(8).tickSize(-cellHeight, 0, 0);
+
 // Ordinal color scale for cylinders color mapping
 var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 // Map for referencing min/max per each attribute
 var extentByAttribute = {};
 // Object for keeping state of which cell is currently being brushed
 var brushCell;
+
+var allGenres = new Set();
 
 // onAxisChange();
 drawGraphs();
@@ -218,12 +241,139 @@ function brushend() {
     }
 }
 
+
+function drawBarChart(genreSelection, yearSelection) {
+    // Build data points to chart {Genre: TotalGenreBudget}
+    combinedBudgets = {};
+    movies.forEach(function(m){
+        if (yearSelection[0] <= m.title_year && m.title_year <= yearSelection[1]) {
+            m.genres.forEach(function(genre){
+                if (genreSelection.includes(genre)) {
+                    if (genre in combinedBudgets) {
+                        combinedBudgets[genre] += m.budget;
+                    } else {
+                        combinedBudgets[genre] = m.budget;
+                    }
+                }
+            });
+        }
+    });
+    var combinedBudgetsExtent = [d3.min(Object.values(combinedBudgets)), d3.max(Object.values(combinedBudgets))]
+    // set start of bar x-axis to 0
+    combinedBudgetsExtent[0] = 0;
+
+
+    chartBar.selectAll('.axis').remove();
+    chartBar.selectAll('.x.axis')
+        .data(["budget"])
+        .enter()
+        .append('g')
+        .attr('class', 'x axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[0, 0]+')';
+        })
+        .each(function(attribute){
+            xScaleBar.domain(combinedBudgetsExtent);
+            d3.select(this).call(xAxisBar);
+            d3.select(this).append('text')
+                .text("Combined Genre Budget")
+                .attr('class', 'axis-label')
+                .attr('transform', 'translate('+[cellWidth/2-10, -20]+')');
+        });
+
+    chartBar.selectAll('.y.axis')
+        .data(["genre"])
+        .enter()
+        .append('g')
+        .attr('class', 'y axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[0, cellPadding]+')';
+        })
+        .each(function(attribute){
+            yScaleBar.domain(genreSelection);
+            d3.select(this).call(yAxisBar);
+        });
+}
+
+function drawLineChart(genreSelection, yearSelection) {
+    // Build data points to chart {Genre: {year_1: total_1, year_2: total_2, ...}}
+    yearTotals = {};
+
+    movies.forEach(function(m){
+        if (yearSelection[0] <= m.title_year && m.title_year <= yearSelection[1]) {
+            m.genres.forEach(function(genre){
+                if (genreSelection.includes(genre)){
+                    if (genre in yearTotals) {
+                        if (m.title_year in yearTotals[genre]) {
+                            yearTotals[genre][m.title_year] += 1;
+                        } else {
+                            yearTotals[genre][m.title_year] = 1;
+                        }
+                    } else {
+                        yearTotals[genre] = {};
+                        yearTotals[genre][m.title_year] = 1;
+                    }
+                }
+            });
+        }
+    });
+
+    // Find extent for data just generated
+    var yearTotalsExtent = [999999, 0]
+    Object.entries(yearTotals).forEach(function(g){
+        Object.entries(g[1]).forEach(function(y){
+            if (y[1] < yearTotalsExtent[0]) {
+                yearTotalsExtent[0] = y[1];
+            }
+            if (y[1] > yearTotalsExtent[1]) {
+                yearTotalsExtent[1] = y[1];
+            }
+        });
+    })
+
+    // Axis for year line chart
+    chartLine.selectAll('.axis').remove();
+    chartLine.selectAll('.x.axis')
+        .data(["title_year"])
+        .enter()
+        .append('g')
+        .attr('class', 'x axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[0, 0]+')';
+        })
+        .each(function(attribute){
+            xScaleLine.domain(extentByAttribute[attribute]);
+            d3.select(this).call(xAxisLine);
+            d3.select(this).append('text')
+                .text('Release Year')
+                .attr('class', 'axis-label')
+                .attr('transform', 'translate('+[cellWidth/2, -20]+')');
+        });
+
+    chartLine.selectAll('.y.axis')
+        .data(["total_for_year"])
+        .enter()
+        .append('g')
+        .attr('class', 'x axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[-10, 0]+')';
+        })
+        .each(function(attribute){
+            yScaleLine.domain(yearTotalsExtent);
+            d3.select(this).call(yAxisLine);
+            d3.select(this).append('text')
+                .text('Total # of Movies')
+                .attr('class', 'axis-label')
+                .attr('transform', 'translate('+[-30, (cellHeight-cellPadding)/2]+')rotate(270)');
+        });
+
+}
+
 var cells = [];
 function drawGraphs() {
-    d3.csv('data/movies.csv', dataPreprocessor).then(function(dataset) {
+    d3.csv('data/filtered_movies.csv', dataPreprocessor).then(function(dataset) {
         
             movies = dataset;
-            // console.log(movies);
 
             // Create map for each attribute's extent (min, max)
             dataAttributes.forEach(function(attribute){
@@ -233,12 +383,11 @@ function drawGraphs() {
             });
 
             console.log(extentByAttribute);
+            console.log(allGenres);
 
-            // Render gridlines and labels
-            /// NOTE: This should be chartG for the scatPlot,
-            /// but should probably make a different group for future plots
-            chartG.selectAll('.axis').remove();
-            chartG.selectAll('.x.axis')
+            // Render gridlines and labels for scatter plot
+            chartSplot.selectAll('.axis').remove();
+            chartSplot.selectAll('.x.axis')
                 .data([dataAttributes[0]])
                 .enter()
                 .append('g')
@@ -255,7 +404,7 @@ function drawGraphs() {
                         .attr('transform', 'translate('+[(cellWidth - cellPadding)/2, -20]+')');
                 });
 
-            chartG.selectAll('.y.axis')
+            chartSplot.selectAll('.y.axis')
                 .data([dataAttributes[1]])
                 .enter()
                 .append('g')
@@ -270,7 +419,21 @@ function drawGraphs() {
                         .text("Gross")
                         .attr('class', 'axis-label')
                         .attr('transform', 'translate('+[-50, (cellHeight - cellPadding)/2]+')rotate(270)');
-                })
+                });
+
+            /// Add frame for splot?
+
+            // Render gridlines and labels for line plot
+            var years = [2010, 2016];
+            // var genres = Array.from(allGenres);
+            var genres = ["Action", "Thriller"];
+            // var genres = ["News"];
+
+            drawBarChart(genres, years);
+            drawLineChart(genres, years);
+
+            // Render gridlines and labels for bar chart
+
 
         });
 }
@@ -278,7 +441,12 @@ function drawGraphs() {
 
 // Used for processing the CSV file
 function dataPreprocessor(row) {
+    // Get genres and add them to set
     genres = row['genres'].split("|");
+    genres.forEach(function(g){
+        allGenres.add(g);
+    });
+
     return {
         // 'color': row['color'],
         // 'director_name': row['director_name'],
@@ -309,9 +477,12 @@ function dataPreprocessor(row) {
         // 'imdb_score': +row['imdb_score'],
         // 'aspect_ratio': +row['aspect_ratio'],
         // 'movie_facebook_likes': +row['movie_facebook_likes']
+
+        //// Only use the cols actually needed
         'budget': +row['budget'],
         'gross': +row['gross'],
         'genres': genres,
         'title_year': +row['title_year'],
+        'movie_title': row['movie_title']
     };
 }
