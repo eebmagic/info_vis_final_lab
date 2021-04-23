@@ -51,14 +51,14 @@ var yAxisSplot = d3.axisLeft(yScaleSplot).ticks(6).tickSize(-cellWidth, 0, 0).ti
 /// NOTE: this formatting gets a little weird for Billions because of SI abbreviations
 var xScaleBar = d3.scaleLinear().range([0, cellWidth - cellPadding]);
 var yScaleBar = d3.scaleBand().range([0, cellWidth]);
-var xAxisBar = d3.axisTop(xScaleBar).ticks(7).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
+var xAxisBar = d3.axisTop(xScaleBar).ticks(5).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
 var yAxisBar = d3.axisLeft(yScaleBar);
 
 // Axis for line chart
 var xScaleLine = d3.scaleLinear().range([0, cellWidth - cellPadding]);
 var yScaleLine = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
 var xAxisLine = d3.axisTop(xScaleLine).ticks(2016-2010).tickSize(-cellHeight, 0, 0).tickFormat(d3.format(""));
-var yAxisLine = d3.axisLeft(yScaleLine).ticks(8).tickSize(-cellHeight, 0, 0);
+var yAxisLine = d3.axisLeft(yScaleLine).ticks(8).tickSize(-cellHeight, 0, 0).tickFormat(d3.format(""));
 
 // Ordinal color scale for cylinders color mapping
 var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -382,7 +382,7 @@ function drawBarChart(genreSelection, yearSelection) {
             xScaleBar.domain(combinedBudgetsExtent);
             d3.select(this).call(xAxisBar);
             d3.select(this).append('text')
-                .text("Combined Genre Budget")
+                .text("Combined Genre Budgets")
                 .attr('class', 'axis-label')
                 .attr('transform', 'translate('+[cellWidth/2-10, -20]+')');
         });
@@ -410,11 +410,9 @@ function drawBarChart(genreSelection, yearSelection) {
             .attr('transform', 'translate('+[0, cellPadding]+')') // Needed to match the y-axis
             .attr('x', 0)
             .attr('y', function(d){
-                // console.log(`y pos for ${d} is ${yScaleBar(d)}`);
                 return yScaleBar(d);
             })
             .attr('width', function(d){
-                // console.log(`Spending for ${d} was ${combinedBudgets[d]}`)
                 return xScaleBar(combinedBudgets[d]);
             })
             .attr('height', barThickness);
@@ -444,7 +442,7 @@ function drawLineChart(genreSelection, yearSelection) {
     });
 
     // Find extent for data just generated
-    var yearTotalsExtent = [99, 0]
+    var yearTotalsExtent = [999, 0]
     Object.entries(yearTotals).forEach(function(g){
         Object.entries(g[1]).forEach(function(y){
             if (y[1] < yearTotalsExtent[0]) {
@@ -454,7 +452,22 @@ function drawLineChart(genreSelection, yearSelection) {
                 yearTotalsExtent[1] = y[1];
             }
         });
-    })
+    });
+
+    // Had to reformat the data to work better with line function
+    var convert = [];
+    Object.entries(yearTotals).forEach(function(g){
+        var dataPoints = [];
+        Object.entries(g[1]).forEach(function(y){
+            var point = {
+                year: parseInt(y[0]),
+                total: y[1]
+            }
+            dataPoints.push(point);
+        });
+        var node = {genre: g[0], data: dataPoints}
+        convert.push(node);
+    });
 
     // Axis for year line chart
     chartLine.selectAll('.axis').remove();
@@ -467,7 +480,8 @@ function drawLineChart(genreSelection, yearSelection) {
             return 'translate('+[0, 0]+')';
         })
         .each(function(attribute){
-            xScaleLine.domain(extentByAttribute[attribute]);
+            xScaleLine.domain(yearSelection);
+            xAxisLine.ticks(yearSelection[1]-yearSelection[0], 'f');
             d3.select(this).call(xAxisLine);
             d3.select(this).append('text')
                 .text('Release Year')
@@ -491,12 +505,31 @@ function drawLineChart(genreSelection, yearSelection) {
                 .attr('class', 'axis-label')
                 .attr('transform', 'translate('+[-30, (cellHeight-cellPadding)/2]+')rotate(270)');
         });
+
+    // Add paths for each genre
+    var lineIterpolate = d3.line()
+        .x(d => xScaleLine(d.year))
+        .y(d => yScaleLine(d.total));
+
+    chartLine.selectAll('path').remove();
+    chartLine.selectAll('path')
+        .data(convert)
+        .enter()
+        .each(function(g){
+            d3.select(this).append('path')
+                .attr('class', 'line-plot')
+                .attr('d', function(g, i){
+                    return lineIterpolate(g.data)+"";
+                })
+                .attr('fill', 'none')
+                .attr('stroke', 'black');
+        })
 }
 
 function redraw() {
     /// TODO: years/checkboxes may need to be two separate functions
     ///         might make things a little faster??
-    
+
     // Get genre selections from checkboxes
     var selected = [];
     d3.selectAll("input").each(function(d){ 
@@ -506,11 +539,10 @@ function redraw() {
             }
         }
     });
-    console.log(selected);
+    // console.log(selected);
 
     // Get year selections
     var years = sliderRange.value()
-    console.log(`sliderRange: ${years}`)
 
     // Redraw graphs with new params
     drawSplotChart(selected, years);
@@ -541,7 +573,7 @@ function drawGraphs() {
     d3.csv('data/filtered_movies.csv', dataPreprocessor).then(function(dataset) {
         
             movies = dataset;
-            console.log(movies);
+            // console.log(movies);
 
             // Create map for each attribute's extent (min, max)
             dataAttributes.forEach(function(attribute){
