@@ -241,6 +241,63 @@ function brushend() {
     }
 }
 
+function drawSplotChart(genreSelection, yearSelection) {
+    // Build list of movies to plot
+    var splotMovies = new Set();
+    movies.forEach(function(m){
+        if (yearSelection[0] <= m.title_year && m.title_year <= yearSelection[1]){
+            m.genres.forEach(function(genre){
+                if (genreSelection.includes(genre)){
+                    splotMovies.add(m);
+                }
+            })
+        }
+    })
+    splotMovies = Array.from(splotMovies);
+    var budgetExtent = d3.extent(splotMovies, function(m){
+        return m.budget;
+    });
+    var grossExtent = d3.extent(splotMovies, function(m){
+        return m.gross;
+    });
+
+
+    // Render gridlines and labels for scatter plot
+    chartSplot.selectAll('.axis').remove();
+    chartSplot.selectAll('.x.axis')
+        .data(["budget"])
+        .enter()
+        .append('g')
+        .attr('class', 'x axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[cellPadding / 2, 0]+')';
+        })
+        .each(function(attribute){
+            xScale.domain(budgetExtent);
+            d3.select(this).call(xAxis);
+            d3.select(this).append('text')
+                .text("Budget")
+                .attr('class', 'axis-label')
+                .attr('transform', 'translate('+[(cellWidth - cellPadding)/2, -20]+')');
+        });
+
+    chartSplot.selectAll('.y.axis')
+        .data(["gross"])
+        .enter()
+        .append('g')
+        .attr('class', 'y axis')
+        .attr('transform', function(d, i){
+            return 'translate('+[0, cellPadding/2]+')';
+        })
+        .each(function(attribute){
+            yScale.domain(grossExtent);
+            d3.select(this).call(yAxis);
+            d3.select(this).append('text')
+                .text("Gross")
+                .attr('class', 'axis-label')
+                .attr('transform', 'translate('+[-50, (cellHeight - cellPadding)/2]+')rotate(270)');
+        });
+}
 
 function drawBarChart(genreSelection, yearSelection) {
     // Build data points to chart {Genre: TotalGenreBudget}
@@ -293,6 +350,25 @@ function drawBarChart(genreSelection, yearSelection) {
             yScaleBar.domain(genreSelection);
             d3.select(this).call(yAxisBar);
         });
+
+    // Add bars for genre spending
+    var barThickness = cellHeight / genreSelection.length;
+    chartBar.selectAll('rect').remove();
+    chartBar.selectAll('rect')
+        .data(genreSelection)
+        .enter()
+        .append('rect')
+            .attr('transform', 'translate('+[0, cellPadding]+')') // Needed to match the y-axis
+            .attr('x', 0)
+            .attr('y', function(d){
+                // console.log(`y pos for ${d} is ${yScaleBar(d)}`);
+                return yScaleBar(d);
+            })
+            .attr('width', function(d){
+                // console.log(`Spending for ${d} was ${combinedBudgets[d]}`)
+                return xScaleBar(combinedBudgets[d]);
+            })
+            .attr('height', barThickness);
 }
 
 function drawLineChart(genreSelection, yearSelection) {
@@ -366,7 +442,6 @@ function drawLineChart(genreSelection, yearSelection) {
                 .attr('class', 'axis-label')
                 .attr('transform', 'translate('+[-30, (cellHeight-cellPadding)/2]+')rotate(270)');
         });
-
 }
 
 var cells = [];
@@ -374,6 +449,7 @@ function drawGraphs() {
     d3.csv('data/filtered_movies.csv', dataPreprocessor).then(function(dataset) {
         
             movies = dataset;
+            console.log(movies);
 
             // Create map for each attribute's extent (min, max)
             dataAttributes.forEach(function(attribute){
@@ -385,50 +461,17 @@ function drawGraphs() {
             console.log(extentByAttribute);
             console.log(allGenres);
 
-            // Render gridlines and labels for scatter plot
-            chartSplot.selectAll('.axis').remove();
-            chartSplot.selectAll('.x.axis')
-                .data([dataAttributes[0]])
-                .enter()
-                .append('g')
-                .attr('class', 'x axis')
-                .attr('transform', function(d, i){
-                    return 'translate('+[cellPadding / 2, 0]+')';
-                })
-                .each(function(attribute){
-                    xScale.domain(extentByAttribute['budget']);
-                    d3.select(this).call(xAxis);
-                    d3.select(this).append('text')
-                        .text("Budget")
-                        .attr('class', 'axis-label')
-                        .attr('transform', 'translate('+[(cellWidth - cellPadding)/2, -20]+')');
-                });
-
-            chartSplot.selectAll('.y.axis')
-                .data([dataAttributes[1]])
-                .enter()
-                .append('g')
-                .attr('class', 'y axis')
-                .attr('transform', function(d, i){
-                    return 'translate('+[0, cellPadding/2]+')';
-                })
-                .each(function(attribute){
-                    yScale.domain(extentByAttribute['gross']);
-                    d3.select(this).call(yAxis);
-                    d3.select(this).append('text')
-                        .text("Gross")
-                        .attr('class', 'axis-label')
-                        .attr('transform', 'translate('+[-50, (cellHeight - cellPadding)/2]+')rotate(270)');
-                });
 
             /// Add frame for splot?
 
             // Render gridlines and labels for line plot
             var years = [2010, 2016];
             // var genres = Array.from(allGenres);
+            // var genres = Array.from(allGenres).slice(12);
             var genres = ["Action", "Thriller"];
             // var genres = ["News"];
 
+            drawSplotChart(genres, years);
             drawBarChart(genres, years);
             drawLineChart(genres, years);
 
