@@ -69,6 +69,39 @@ var brushCell;
 
 var allGenres = new Set();
 
+// Add slider for year range
+var sliderRange = d3
+    .sliderBottom()
+    .min(2010)
+    .max(2016)
+    .width(300)
+    .tickFormat(d3.format(""))
+    .ticks(5)
+    .step(1)
+    .default([2010, 2016])
+    .fill('#2196f3')
+    .on('onchange', val => {
+        redraw();
+        d3.select('p#value-range').text(val.map(d3.format("")).join('-'));
+    });
+
+var gRange = d3
+    .select('div#slider-range')
+    .append('svg')
+    .attr('width', 500)
+    .attr('height', 100)
+    .append('g')
+    .attr('transform', 'translate(30,30)');
+
+gRange.call(sliderRange);
+
+d3.select('p#value-range').text(
+    sliderRange
+        .value()
+        .map(d3.format(""))
+        .join('-')
+);
+
 // onAxisChange();
 drawGraphs();
 
@@ -411,7 +444,7 @@ function drawLineChart(genreSelection, yearSelection) {
     });
 
     // Find extent for data just generated
-    var yearTotalsExtent = [999999, 0]
+    var yearTotalsExtent = [99, 0]
     Object.entries(yearTotals).forEach(function(g){
         Object.entries(g[1]).forEach(function(y){
             if (y[1] < yearTotalsExtent[0]) {
@@ -461,10 +494,10 @@ function drawLineChart(genreSelection, yearSelection) {
 }
 
 function redraw() {
-    console.log("CHECHBOX CHANGED. REDRAWING CHARTS.")
-    // var boxes = d3.select('input').property('checked', true);
-    // console.log(boxes);
-
+    /// TODO: years/checkboxes may need to be two separate functions
+    ///         might make things a little faster??
+    
+    // Get genre selections from checkboxes
     var selected = [];
     d3.selectAll("input").each(function(d){ 
         if(d3.select(this).attr("type") == "checkbox") {
@@ -475,7 +508,11 @@ function redraw() {
     });
     console.log(selected);
 
-    var years = [2010, 2016];
+    // Get year selections
+    var years = sliderRange.value()
+    console.log(`sliderRange: ${years}`)
+
+    // Redraw graphs with new params
     drawSplotChart(selected, years);
     drawBarChart(selected, years);
     drawLineChart(selected, years);
@@ -513,34 +550,11 @@ function drawGraphs() {
                 });
             });
 
-            console.log(extentByAttribute);
-            console.log(allGenres);
-
-
-            // Add the checkboxes
-            selectors.selectAll('input')
-                .data(allGenres)
-                .enter()
-                .append('input')
-                .attr('type', 'checkbox')
-                .attr('value', function(g){
-                    console.log(`Adding value for ${g}`)
-                    return g;
-                })
-
-
-            // Get the parameters to chart
-            var years = [2010, 2016];
-            var genres = Array.from(allGenres);
-            // var genres = Array.from(allGenres).slice(12);
-            // var genres = ["Action", "Thriller"];
-            // var genres = ["News", "Documentary"];
+            // console.log(extentByAttribute);
+            // console.log(allGenres);
 
             // Draw the charts, given the parameters
-            drawSplotChart(genres, years);
-            drawBarChart(genres, years);
-            drawLineChart(genres, years);
-
+            redraw();
         });
 }
 
