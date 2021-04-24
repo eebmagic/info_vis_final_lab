@@ -108,3 +108,17 @@ label {
 #main {
     margin: 20px;
 }
+
+.container {
+/*  float: left;
+  clear: none; */
+  display: flex;
+}
+
+.selectors {
+  margin: 20px;
+}
+
+.selectors input {
+  margin-right: 10px;
+}

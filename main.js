@@ -41,14 +41,11 @@ var chartLine = svg.append('g')
 // Axis for scatter plot
 var xScaleSplot = d3.scaleLinear().range([0, cellWidth - cellPadding]);
 var yScaleSplot = d3.scaleLinear().range([cellHeight - cellPadding, 0]);
-// axes that are rendered already for you
-// var xAxis = d3.axisTop(xScale).ticks(6).tickSize(-cellHeight * N, 0, 0);
-// var yAxis = d3.axisLeft(yScale).ticks(6).tickSize(-cellWidth * N, 0, 0);
 var xAxisSplot = d3.axisTop(xScaleSplot).ticks(4).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
 var yAxisSplot = d3.axisLeft(yScaleSplot).ticks(6).tickSize(-cellWidth, 0, 0).tickFormat(d3.format("$.0s"));
 
 // Axis for bar chart
-/// NOTE: this formatting gets a little weird for Billions because of SI abbreviations
+// NOTE: this formatting gets a little weird for Billions because of SI abbreviations ($1 Billion = "$1.0G")
 var xScaleBar = d3.scaleLinear().range([0, cellWidth - cellPadding]);
 var yScaleBar = d3.scaleBand().range([0, cellWidth]);
 var xAxisBar = d3.axisTop(xScaleBar).ticks(5).tickSize(-cellHeight, 0, 0).tickFormat(d3.format("$.0s"));
@@ -61,12 +58,11 @@ var xAxisLine = d3.axisTop(xScaleLine).ticks(2016-2010).tickSize(-cellHeight, 0,
 var yAxisLine = d3.axisLeft(yScaleLine).ticks(8).tickSize(-cellHeight, 0, 0).tickFormat(d3.format(""));
 
 // Ordinal color scale for cylinders color mapping
-var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+// var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+var colorScale = d3.scaleOrdinal(d3.schemePaired);
+
 // Map for referencing min/max per each attribute
 var extentByAttribute = {};
-// Object for keeping state of which cell is currently being brushed
-var brushCell;
-
 var allGenres = new Set();
 
 // Add slider for year range
@@ -176,8 +172,15 @@ function drawSplotChart(genreSelection, yearSelection) {
             .attr('cy', function(m){
                 return yScaleSplot(m.gross);
             })
-            .attr('r', 4);
+            .attr('r', 4)
+            .style('fill', function(d){
+                // Simply use the first genre in list of genres for color
+                return colorScale(d.genres[0]);
+            });
 }
+
+
+// Draw functions and handlers
 
 function drawBarChart(genreSelection, yearSelection) {
     // Build data points to chart {Genre: TotalGenreBudget}
@@ -248,7 +251,10 @@ function drawBarChart(genreSelection, yearSelection) {
             .attr('width', function(d){
                 return xScaleBar(combinedBudgets[d]);
             })
-            .attr('height', barThickness);
+            .attr('height', barThickness)
+            .attr('fill', function(g){
+                return colorScale(g);
+            });
 }
 
 function drawLineChart(genreSelection, yearSelection) {
@@ -355,15 +361,14 @@ function drawLineChart(genreSelection, yearSelection) {
                     return lineIterpolate(g.data)+"";
                 })
                 .attr('fill', 'none')
-                .attr('stroke', 'black')
+                .attr('stroke', function(g){
+                    return colorScale(g.genre);
+                })
                 .style('stroke-width', 2);
         })
 }
 
 function redraw() {
-    /// TODO: years/checkboxes may need to be two separate functions
-    ///         might make things a little faster??
-
     // Get genre selections from checkboxes
     var selected = [];
     d3.selectAll("input").each(function(d){ 
