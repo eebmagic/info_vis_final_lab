@@ -5,18 +5,8 @@ var selectors = d3.select('.selectors');
 var svgWidth = +svg.attr('width');
 var svgHeight = +svg.attr('height')*2;
 
-var padding = {t: 40, r: 40, b: 40, l: 40};
+var padding = {t: 80, r: 40, b: 40, l: 40};
 var cellPadding = 10;
-
-
-// var dataAttributes = [
-//         'color', 'director_name', 'num_critic_for_reviews', 'duration',
-//         'director_facebook_likes', 'actor_3_facebook_likes', 'actor_2_name', 'actor_1_facebook_likes',
-//         'gross', 'genres', 'actor_1_name', 'movie_title', 'num_voted_users', 'cast_total_facebook_likes',
-//         'actor_3_name', 'facenumber_in_poster', 'plot_keywords', 'movie_imdb_link', 'num_user_for_reviews',
-//         'language', 'country', 'content_rating', 'budget', 'title_year', 'actor_2_facebook_likes', 'imdb_score',
-//         'aspect_ratio', 'movie_facebook_likes'
-//     ]
 
 var dataAttributes = ['budget', 'gross', 'genres', 'title_year']
 // var dataAttributes = ['budget', 'gross']
@@ -98,8 +88,28 @@ d3.select('p#value-range').text(
         .join('-')
 );
 
+// Tooltips
+var toolTip = d3.tip()
+    .attr('class', 'd3-tip')
+    .offset([-12, 0])
+    .html(function(d){
+        var data = d3.select(d.target).attr('data');
+        var x = d3.select(d.target).attr('cx');
+        var y = d3.select(d.target).attr('cy')+10;
+
+        chartSplot.selectAll('.tooltipLabel').remove();
+        var label = chartSplot.append('text')
+            .text(data)
+            .attr('class', 'tooltipLabel')
+            .attr('x', x)
+            .attr('y', y)
+            .style('font-size', '10')
+    });
+
+
 // Initial drawing of graphs
 drawGraphs();
+svg.call(toolTip);
 
 
 function drawSplotChart(genreSelection, yearSelection) {
@@ -161,6 +171,7 @@ function drawSplotChart(genreSelection, yearSelection) {
 
 
     // Draw points on plot
+    chartSplot.selectAll('.tooltipLabel').remove();
     chartSplot.selectAll('circle').remove();
     chartSplot.selectAll('circle')
         .data(splotMovies)
@@ -176,7 +187,15 @@ function drawSplotChart(genreSelection, yearSelection) {
             .style('fill', function(d){
                 // Simply use the first genre in list of genres for color
                 return colorScale(d.genres[0]);
-            });
+            })
+            .data(splotMovies, function(m){
+                return m.movie_title;
+            })
+            .attr('data', function(m){
+                return m.movie_title+" ("+m.title_year+")";
+            })
+            .on('mouseover', toolTip.show)  // Show tooltips on hovers
+            .on('mouseout', toolTip.hide);
 }
 
 
@@ -378,7 +397,6 @@ function redraw() {
             }
         }
     });
-    // console.log(selected);
 
     // Get year selections
     var years = sliderRange.value()
@@ -412,7 +430,6 @@ function drawGraphs() {
     d3.csv('data/filtered_movies.csv', dataPreprocessor).then(function(dataset) {
         
             movies = dataset;
-            // console.log(movies);
 
             // Create map for each attribute's extent (min, max)
             dataAttributes.forEach(function(attribute){
@@ -420,9 +437,6 @@ function drawGraphs() {
                     return d[attribute];
                 });
             });
-
-            // console.log(extentByAttribute);
-            // console.log(allGenres);
 
             // Draw the charts, given the parameters
             redraw();
